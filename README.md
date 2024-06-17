@@ -39,7 +39,7 @@ jobs:
         run: |
           docker build -t docker.io/my-organization/my-app:${{ github.sha }} .
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
           format: 'table'
@@ -67,7 +67,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Run Trivy vulnerability scanner in fs mode
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.20.0
       with:
         scan-type: 'fs'
         scan-ref: '.'
@@ -115,9 +115,9 @@ jobs:
       run: |
         docker pull <your-docker-image>
         docker save -o vuln-image.tar <your-docker-image>
-        
+
     - name: Run Trivy vulnerability scanner in tarball mode
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.20.0
       with:
         input: /github/workspace/vuln-image.tar
         severity: 'CRITICAL,HIGH'
@@ -145,7 +145,7 @@ jobs:
           docker build -t docker.io/my-organization/my-app:${{ github.sha }} .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
           format: 'sarif'
@@ -180,7 +180,7 @@ jobs:
           docker build -t docker.io/my-organization/my-app:${{ github.sha }} .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
           format: 'sarif'
@@ -215,7 +215,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           scan-type: 'fs'
           ignore-unfixed: true
@@ -249,7 +249,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner with rootfs command
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           scan-type: 'rootfs'
           scan-ref: 'rootfs-example-binary'
@@ -284,10 +284,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner in IaC mode
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           scan-type: 'config'
-          hide-progress: false
+          hide-progress: true
           format: 'sarif'
           output: 'trivy-results.sarif'
           exit-code: '1'
@@ -303,7 +303,7 @@ jobs:
 ### Using Trivy to generate SBOM
 It's possible for Trivy to generate an [SBOM](https://www.aquasec.com/cloud-native-academy/supply-chain-security/sbom/) of your dependencies and submit them to a consumer like [GitHub Dependency Graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-the-dependency-graph).
 
-The [sending of an SBOM to GitHub](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/using-the-dependency-submission-api) feature is only available if you currently have GitHub Dependency Graph [enabled in your repo](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/configuring-the-dependency-graph#enabling-and-disabling-the-dependency-graph-for-a-private-repository). 
+The [sending of an SBOM to GitHub](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/using-the-dependency-submission-api) feature is only available if you currently have GitHub Dependency Graph [enabled in your repo](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/configuring-the-dependency-graph#enabling-and-disabling-the-dependency-graph-for-a-private-repository).
 
 In order to send results to GitHub Dependency Graph, you will need to create a [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) or use the [GitHub installation access token](https://docs.github.com/en/actions/security-guides/automatic-token-authentication) (also known as `GITHUB_TOKEN`):
 
@@ -328,13 +328,56 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           scan-type: 'fs'
           format: 'github'
           output: 'dependency-results.sbom.json'
           image-ref: '.'
           github-pat: ${{ secrets.GITHUB_TOKEN }} # or ${{ secrets.github_pat_name }} if you're using a PAT
+```
+
+When scanning images you may want to parse the actual output JSON as Github Dependency doesn't show all details like the file path of each dependency for instance.
+
+You can upload the report as an artifact and download it, for instance using the [upload-artifact action](https://github.com/actions/upload-artifact):
+
+```yaml
+---
+name: Pull Request
+on:
+  push:
+    branches:
+    - main
+
+## GITHUB_TOKEN authentication, add only if you're not going to use a PAT
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Checks
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Scan image in a private registry
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: "private_image_registry/image_name:image_tag"
+          scan-type: image
+          format: 'github'
+          output: 'dependency-results.sbom.json'
+          github-pat: ${{ secrets.GITHUB_TOKEN }} # or ${{ secrets.github_pat_name }} if you're using a PAT
+          severity: "MEDIUM,HIGH,CRITICAL"
+          scanners: "vuln"
+        env:
+          TRIVY_USERNAME: "image_registry_admin_username"
+          TRIVY_PASSWORD: "image_registry_admin_password"
+
+      - name: Upload trivy report as a Github artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sbom-report
+          path: '${{ github.workspace }}/dependency-results.sbom.json'
+          retention-days: 20 # 90 is the default
 ```
 
 ### Using Trivy to scan your private registry
@@ -359,7 +402,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
           format: 'sarif'
@@ -395,7 +438,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'aws_account_id.dkr.ecr.region.amazonaws.com/imageName:${{ github.sha }}'
           format: 'sarif'
@@ -431,7 +474,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
           format: 'sarif'
@@ -464,7 +507,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
           format: 'sarif'
@@ -477,6 +520,35 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
+```
+
+### Using Trivy if you don't have code scanning enabled
+
+It's also possible to browse a scan result in a workflow summary.
+
+This step is especially useful for private repositories without [GitHub Advanced Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security) license.
+
+```yaml
+- name: Run Trivy scanner
+  uses: aquasecurity/trivy-action@0.20.0
+  with:
+    scan-type: config
+    hide-progress: true
+    output: trivy.txt
+
+- name: Publish Trivy Output to Summary
+  run: |
+    if [[ -s trivy.txt ]]; then
+      {
+        echo "### Security Output"
+        echo "<details><summary>Click to expand</summary>"
+        echo ""
+        echo '```terraform'
+        cat trivy.txt
+        echo '```'
+        echo "</details>"
+      } >> $GITHUB_STEP_SUMMARY
+    fi
 ```
 
 ## Customizing
@@ -511,13 +583,14 @@ Following inputs can be used as `step.with` keys:
 | `cache-dir`                  | String  |                                    | Cache directory                                                                                                                                                |
 | `timeout`                    | String  | `5m0s`                             | Scan timeout duration                                                                                                                                          |
 | `ignore-policy`              | String  |                                    | Filter vulnerabilities with OPA rego language                                                                                                                  |
-| `hide-progress`              | String  | `true`                             | Suppress progress bar                                                                                                                                          |
+| `hide-progress`              | String  | `false`                            | Suppress progress bar and log output                                                                                                                           |
 | `list-all-pkgs`              | String  |                                    | Output all packages regardless of vulnerability                                                                                                                |
 | `scanners`                   | String  | `vuln,secret`                      | comma-separated list of what security issues to detect (`vuln`,`secret`,`config`)                                                                              |
 | `trivyignores`               | String  |                                    | comma-separated list of relative paths in repository to one or more `.trivyignore` files                                                                       |
 | `trivy-config`               | String  |                                    | Path to trivy.yaml config                                                                                                                                      |
 | `github-pat`                 | String  |                                    | Authentication token to enable sending SBOM scan results to GitHub Dependency Graph. Can be either a GitHub Personal Access Token (PAT) or GITHUB_TOKEN        |
 | `limit-severities-for-sarif` | Boolean | false                              | By default *SARIF* format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to **true** |
+| `docker-host`                | String  |                                    | By default it is set to `unix://var/run/docker.sock`, but can be updated to help with containerized infrastructure values                                      |
 
 ### Environment variables
 You can use [Trivy environment variables][trivy-env] to set the necessary options (including flags that are not supported by [Inputs](#inputs), such as `--secret-config`).
