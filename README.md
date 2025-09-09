@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build an image from Dockerfile
         run: docker build -t docker.io/my-organization/my-app:${{ github.sha }} .
       - name: Run Trivy vulnerability scanner
@@ -215,7 +215,7 @@ jobs:
       uses: aquasecurity/setup-trivy@v0.2.0
       with:
         cache: true
-        version: v0.63.0
+        version: v0.65.0
 
     - name: Run Trivy vulnerability scanner in repo mode
       uses: aquasecurity/trivy-action@master
@@ -342,7 +342,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
@@ -371,7 +371,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
@@ -590,7 +590,7 @@ jobs:
           scan-type: 'fs'
           format: 'github'
           output: 'dependency-results.sbom.json'
-          image-ref: '.'
+          scan-ref: '.'
           github-pat: ${{ secrets.GITHUB_TOKEN }} # or ${{ secrets.github_pat_name }} if you're using a PAT
 ```
 
@@ -847,7 +847,7 @@ Following inputs can be used as `step.with` keys:
 | `github-pat`                 | String  |                                    | Authentication token to enable sending SBOM scan results to GitHub Dependency Graph. Can be either a GitHub Personal Access Token (PAT) or GITHUB_TOKEN          |
 | `limit-severities-for-sarif` | Boolean | false                              | By default *SARIF* format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to **true**   |
 | `docker-host`                | String  |                                    | By default it is set to `unix://var/run/docker.sock`, but can be updated to help with containerized infrastructure values (`unix:/` or other prefix is required) |
-| `version`                    | String  | `v0.63.0`                          | Trivy version to use, e.g. `latest` or `v0.63.0`                                                                                                                 |
+| `version`                    | String  | `v0.65.0`                          | Trivy version to use, e.g. `latest` or `v0.65.0`                                                                                                                 |
 | `skip-setup-trivy`           | Boolean | false                              | Skip calling the `setup-trivy` action to install `trivy`                                                                                                         |
 | `token-setup-trivy`          | Boolean |                                    | Overwrite `github.token` used by `setup-trivy` to checkout the `trivy` repository                                                                                |
 

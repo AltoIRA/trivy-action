@@ -98,7 +98,7 @@ inputs:
   version:
     description: 'Trivy version to use'
     required: false
-    default: 'v0.63.0'
+    default: 'v0.65.0'
   cache:
     description: 'Used to specify whether caching is needed. Set to false, if you would like to disable caching.'
     required: false
@@ -126,7 +126,7 @@ runs:
       # "allowing select actions" feature can be used to whitelist the dependent action by a hash.
       # This is needed since some organizations have a policy to only allow pinned 3rd party actions to 
       # be used.
-      uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087 # equivalent to `v0.2.2`
+      uses: aquasecurity/setup-trivy@e6c2c5e321ed9123bda567646e2f96565e34abe1 # equivalent to `v0.2.4`
       with:
         version: ${{ inputs.version }}
         cache: ${{ inputs.cache }}
@@ -139,7 +139,7 @@ runs:
 
     - name: Restore DB from cache
       if: ${{ inputs.cache == 'true' }}
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         path: ${{ inputs.cache-dir }}
         key: cache-trivy-${{ steps.date.outputs.date }}
